@@ -144,7 +144,7 @@ function CatalogPage() {
       <CategoryTabs activeCategory={activeCategory} onChange={setActiveCategory} />
 
       {successMessage && (
-        <p className="mb-4 rounded-lg bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-800">{successMessage}</p>
+        <p aria-live="polite" className="mb-4 rounded-lg bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-800">{successMessage}</p>
       )}
 
       {error && (
@@ -192,7 +192,11 @@ function CatalogPage() {
       </section>
 
       {selectedBook && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+          role="presentation"
+          onClick={closeOrderPopup}
+        >
           <div
             ref={modalRef}
             className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
@@ -200,6 +204,7 @@ function CatalogPage() {
             aria-modal="true"
             aria-labelledby="order-modal-title"
             onKeyDown={handleModalKeyDown}
+            onClick={(event) => event.stopPropagation()}
           >
             <h2 id="order-modal-title" className="text-lg font-bold text-slate-900">{selectedBook.title}</h2>
             <p className="mt-1 text-sm text-slate-600">Select grade, enter quantity, and place your order.</p>
