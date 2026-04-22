@@ -102,6 +102,7 @@ Frontend runs on `http://localhost:5173`.
   - `DATABASE_URL`
   - `PORT` (optional, host can provide this)
   - `CORS_ORIGIN` (comma-separated allowed frontend origins, for example `https://<user>.github.io,http://localhost:5173`)
+  - `CORS_ALLOW_NO_ORIGIN` (`true` to allow requests without `Origin` header, default `false`)
 - Optional: set repository secret `BACKEND_DEPLOY_HOOK_URL` to enable `.github/workflows/deploy-backend-hook.yml`, which triggers your hosting provider deploy hook on backend changes.
 
 ## API Endpoints
