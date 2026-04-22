@@ -4,7 +4,7 @@ function BookCard({ book, onSelect }) {
       type="button"
       onClick={() => onSelect(book)}
       aria-label={`Select ${book.title}`}
-      className="flex h-full w-full flex-col rounded-xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-blue-300"
+      className="flex h-full w-full flex-col rounded-xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:ring-blue-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
     >
       <img
         src={book.image}

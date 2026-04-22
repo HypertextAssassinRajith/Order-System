@@ -175,7 +175,10 @@ function CatalogPage() {
               type="number"
               min="1"
               value={orderQtyInput}
-              onChange={(e) => setOrderQtyInput(e.target.value)}
+              onChange={(e) => {
+                const parsed = Number.parseInt(e.target.value, 10);
+                setOrderQtyInput(Number.isInteger(parsed) && parsed > 0 ? parsed : 1);
+              }}
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
 
