@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import CategoryTabs from '../components/CategoryTabs';
 import BookCard from '../components/BookCard';
@@ -22,7 +22,10 @@ function CatalogPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedGrade, setSelectedGrade] = useState('A');
-  const [orderQtyInput, setOrderQtyInput] = useState(1);
+  const [orderQtyInput, setOrderQtyInput] = useState('1');
+  const modalRef = useRef(null);
+  const qtyInputRef = useRef(null);
+  const triggerElementRef = useRef(null);
 
   useEffect(() => {
     async function fetchBooks() {
@@ -52,14 +55,16 @@ function CatalogPage() {
     return books.slice(start, start + PAGE_SIZE);
   }, [books, page]);
 
-  function openOrderPopup(book) {
+  function openOrderPopup(book, triggerElement) {
     setSelectedBook(book);
     setSelectedGrade('A');
-    setOrderQtyInput(1);
+    setOrderQtyInput('1');
+    triggerElementRef.current = triggerElement;
   }
 
   function closeOrderPopup() {
     setSelectedBook(null);
+    triggerElementRef.current?.focus();
   }
 
   useEffect(() => {
@@ -74,6 +79,32 @@ function CatalogPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedBook]);
+
+  useEffect(() => {
+    if (!selectedBook) return;
+    qtyInputRef.current?.focus();
+  }, [selectedBook]);
+
+  function handleModalKeyDown(event) {
+    if (event.key !== 'Tab' || !modalRef.current) return;
+
+    const focusableElements = modalRef.current.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+
+    if (focusableElements.length === 0) return;
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  }
 
   async function placeOrder() {
     if (!selectedBook) return;
@@ -162,7 +193,14 @@ function CatalogPage() {
 
       {selectedBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+          <div
+            ref={modalRef}
+            className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-modal-title"
+            onKeyDown={handleModalKeyDown}
+          >
             <h2 id="order-modal-title" className="text-lg font-bold text-slate-900">{selectedBook.title}</h2>
             <p className="mt-1 text-sm text-slate-600">Select grade, enter quantity, and place your order.</p>
 
@@ -191,8 +229,10 @@ function CatalogPage() {
               id="order-qty-input"
               type="number"
               min="1"
+              ref={qtyInputRef}
               value={orderQtyInput}
-              onChange={(e) => setOrderQtyInput(parsePositiveQty(e.target.value))}
+              onChange={(e) => setOrderQtyInput(e.target.value)}
+              onBlur={() => setOrderQtyInput(String(parsePositiveQty(orderQtyInput)))}
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
 
