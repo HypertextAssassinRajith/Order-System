@@ -2,22 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import CategoryTabs from '../components/CategoryTabs';
 import BookCard from '../components/BookCard';
-import Cart from '../components/Cart';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 const PAGE_SIZE = 12;
+const GRADES = ['A', 'B', 'C'];
 
 function CatalogPage() {
   const [activeCategory, setActiveCategory] = useState('top');
   const [books, setBooks] = useState([]);
-  const [bookQtyInput, setBookQtyInput] = useState({});
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const [cart, setCart] = useState([]);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedGrade, setSelectedGrade] = useState('A');
+  const [orderQtyInput, setOrderQtyInput] = useState(1);
 
   useEffect(() => {
     async function fetchBooks() {
@@ -47,40 +47,20 @@ function CatalogPage() {
     return books.slice(start, start + PAGE_SIZE);
   }, [books, page]);
 
-  function handleBookQtyChange(bookId, value) {
-    const parsed = Number.parseInt(value, 10);
-    setBookQtyInput((prev) => ({
-      ...prev,
-      [bookId]: Number.isInteger(parsed) && parsed > 0 ? parsed : 1
-    }));
+  function openOrderPopup(book) {
+    setSelectedBook(book);
+    setSelectedGrade('A');
+    setOrderQtyInput(1);
   }
 
-  function addToCart(bookId) {
-    const book = books.find((b) => b.id === bookId);
-    if (!book) return;
-
-    const qty = bookQtyInput[bookId] || 1;
-
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === book.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.id === book.id ? { ...i, qty: i.qty + qty } : i
-        );
-      }
-
-      return [...prev, { ...book, qty }];
-    });
-  }
-
-  function updateCartQty(bookId, value) {
-    const parsed = Number.parseInt(value, 10);
-    const safeQty = Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
-    setCart((prev) => prev.map((item) => (item.id === bookId ? { ...item, qty: safeQty } : item)));
+  function closeOrderPopup() {
+    setSelectedBook(null);
   }
 
   async function placeOrder() {
-    if (cart.length === 0) return;
+    if (!selectedBook) return;
+    const parsedQty = Number.parseInt(orderQtyInput, 10);
+    const safeQty = Number.isInteger(parsedQty) && parsedQty > 0 ? parsedQty : 1;
 
     setPlacingOrder(true);
     setError('');
@@ -88,14 +68,16 @@ function CatalogPage() {
 
     try {
       await axios.post(`${API_BASE_URL}/api/orders`, {
-        items: cart.map((item) => ({
-          bookId: item.id,
-          qty: item.qty
-        }))
+        items: [
+          {
+            bookId: selectedBook.id,
+            qty: safeQty
+          }
+        ]
       });
 
-      setCart([]);
-      setSuccessMessage('Order placed successfully!');
+      setSuccessMessage(`Order placed successfully for grade ${selectedGrade}.`);
+      closeOrderPopup();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to place order.');
     } finally {
@@ -107,7 +89,7 @@ function CatalogPage() {
     <main className="mx-auto min-h-screen max-w-7xl px-4 py-6">
       <header className="mb-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
         <h1 className="text-2xl font-bold text-slate-900">Book Catalog & Simple Ordering</h1>
-        <p className="mt-1 text-sm text-slate-600">Browse books by category, add to cart, and place an order.</p>
+        <p className="mt-1 text-sm text-slate-600">Browse books by category, select grade and quantity, and place an order.</p>
       </header>
 
       <CategoryTabs activeCategory={activeCategory} onChange={setActiveCategory} />
@@ -120,20 +102,18 @@ function CatalogPage() {
         <p className="mb-4 rounded-lg bg-rose-100 px-4 py-3 text-sm font-medium text-rose-800">{error}</p>
       )}
 
-      <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <section>
         <div>
           {loading ? (
             <div className="rounded-xl bg-white p-6 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">Loading books...</div>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-4">
                 {visibleBooks.map((book) => (
                   <BookCard
                     key={book.id}
                     book={book}
-                    quantity={bookQtyInput[book.id] || 1}
-                    onQuantityChange={handleBookQtyChange}
-                    onAddToCart={addToCart}
+                    onSelect={openOrderPopup}
                   />
                 ))}
               </div>
@@ -160,14 +140,64 @@ function CatalogPage() {
             </>
           )}
         </div>
-
-        <Cart
-          cartItems={cart}
-          onUpdateQty={updateCartQty}
-          onPlaceOrder={placeOrder}
-          placingOrder={placingOrder}
-        />
       </section>
+
+      {selectedBook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-900">{selectedBook.title}</h2>
+            <p className="mt-1 text-sm text-slate-600">Select grade, enter quantity, and place your order.</p>
+
+            <fieldset className="mt-4">
+              <legend className="text-sm font-semibold text-slate-800">Grade</legend>
+              <div className="mt-2 flex gap-4">
+                {GRADES.map((grade) => (
+                  <label key={grade} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="grade"
+                      value={grade}
+                      checked={selectedGrade === grade}
+                      onChange={(e) => setSelectedGrade(e.target.value)}
+                    />
+                    {grade}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <label className="mt-4 block text-sm font-semibold text-slate-800" htmlFor="order-qty-input">
+              Quantity
+            </label>
+            <input
+              id="order-qty-input"
+              type="number"
+              min="1"
+              value={orderQtyInput}
+              onChange={(e) => setOrderQtyInput(e.target.value)}
+              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeOrderPopup}
+                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={placeOrder}
+                disabled={placingOrder}
+                className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-emerald-300 hover:bg-emerald-700"
+              >
+                {placingOrder ? 'Placing Order...' : 'Place Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
