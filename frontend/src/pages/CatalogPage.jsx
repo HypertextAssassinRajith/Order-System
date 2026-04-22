@@ -71,7 +71,8 @@ function CatalogPage() {
         items: [
           {
             bookId: selectedBook.id,
-            qty: safeQty
+            qty: safeQty,
+            grade: selectedGrade
           }
         ]
       });
