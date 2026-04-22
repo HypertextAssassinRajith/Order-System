@@ -7,6 +7,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000
 const PAGE_SIZE = 12;
 const GRADES = ['A', 'B', 'C'];
 
+function parsePositiveQty(value) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
 function CatalogPage() {
   const [activeCategory, setActiveCategory] = useState('top');
   const [books, setBooks] = useState([]);
@@ -57,10 +62,22 @@ function CatalogPage() {
     setSelectedBook(null);
   }
 
+  useEffect(() => {
+    if (!selectedBook) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        closeOrderPopup();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedBook]);
+
   async function placeOrder() {
     if (!selectedBook) return;
-    const parsedQty = Number.parseInt(orderQtyInput, 10);
-    const safeQty = Number.isInteger(parsedQty) && parsedQty > 0 ? parsedQty : 1;
+    const safeQty = parsePositiveQty(orderQtyInput);
 
     setPlacingOrder(true);
     setError('');
@@ -145,8 +162,8 @@ function CatalogPage() {
 
       {selectedBook && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-bold text-slate-900">{selectedBook.title}</h2>
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+            <h2 id="order-modal-title" className="text-lg font-bold text-slate-900">{selectedBook.title}</h2>
             <p className="mt-1 text-sm text-slate-600">Select grade, enter quantity, and place your order.</p>
 
             <fieldset className="mt-4">
@@ -175,10 +192,7 @@ function CatalogPage() {
               type="number"
               min="1"
               value={orderQtyInput}
-              onChange={(e) => {
-                const parsed = Number.parseInt(e.target.value, 10);
-                setOrderQtyInput(Number.isInteger(parsed) && parsed > 0 ? parsed : 1);
-              }}
+              onChange={(e) => setOrderQtyInput(parsePositiveQty(e.target.value))}
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
             />
 
